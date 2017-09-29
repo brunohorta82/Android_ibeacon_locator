@@ -11,6 +11,13 @@ import android.os.RemoteException;
 import android.util.Log;
 import android.widget.TextView;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+
 import org.altbeacon.beacon.Beacon;
 import org.altbeacon.beacon.BeaconConsumer;
 import org.altbeacon.beacon.BeaconManager;
@@ -18,8 +25,11 @@ import org.altbeacon.beacon.BeaconParser;
 import org.altbeacon.beacon.RangeNotifier;
 import org.altbeacon.beacon.Region;
 import org.altbeacon.beacon.service.RangedBeacon;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.Collection;
+import java.util.HashMap;
 
 
 public class MainActivity extends Activity implements BeaconConsumer {
@@ -31,6 +41,7 @@ public class MainActivity extends Activity implements BeaconConsumer {
     TextView  t1 ;
     TextView  t2 ;
     TextView  t3 ;
+    TextView  api ;
     protected double norm(Point p) // get the norm of a vector
     {
         return Math.pow(Math.pow(p.x, 2) + Math.pow(p.y, 2), .5);
@@ -88,6 +99,7 @@ public class MainActivity extends Activity implements BeaconConsumer {
         t1 = findViewById(R.id.t1);
         t2 = findViewById(R.id.t2);
         t3 = findViewById(R.id.t3);
+        api = findViewById(R.id.api);
 
         RangedBeacon.setSampleExpirationMilliseconds(1000);
         //BeaconManager.setDebug(true);
@@ -149,6 +161,14 @@ public class MainActivity extends Activity implements BeaconConsumer {
                     final Point finalB2 = b2;
                     final Point finalB3 = b3;
 
+
+                    String url ="http://sithere.net/api/PixelLocator/GetPosition/";
+                    HashMap<String,String> stringStringHashMap = new HashMap<>();
+                    stringStringHashMap.put("b1", String.valueOf(b1.distance));
+                    stringStringHashMap.put("b2", String.valueOf(b2.distance));
+                    stringStringHashMap.put("b3", String.valueOf(b3.distance));
+                    postData(url,stringStringHashMap);
+
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -176,6 +196,7 @@ public class MainActivity extends Activity implements BeaconConsumer {
         }
     }
 
+
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            String permissions[], int[] grantResults) {
@@ -200,6 +221,45 @@ public class MainActivity extends Activity implements BeaconConsumer {
                 return;
             }
         }
+    }
+    public void postData(String url,HashMap data){
+        final RequestQueue requstQueue = Volley.newRequestQueue(getApplicationContext());
+
+        JsonObjectRequest jsonobj = new JsonObjectRequest(Request.Method.POST, url,new JSONObject(data),
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(final JSONObject response) {
+                        System.out.println(response.toString());
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+
+                                try {
+                                    t.setText("X: "+response.get("x")+" Y: "+response.get("y"));
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                }
+                                //t1.setText("B1 "+finalB1.distance+" mts");
+                                //t2.setText("B2 "+finalB2.distance+" mts");
+                                //t3.setText("B3 "+finalB3.distance+" mts");
+
+                            }
+                        });
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+
+                    }
+
+
+                }
+        ){
+            //here I want to post data to sever
+        };
+        requstQueue.add(jsonobj);
+
     }
 
 }
